@@ -7,7 +7,8 @@
    - `build_index.py` ✅
    - `requirements.txt` ✅
    - `nixpacks.toml` ✅
-   - `railway.json` ✅
+   - `railway.toml` ✅
+   - `Dockerfile` ✅ (alternatif)
    - Folder `data/` dengan semua markdown files ✅
 
 2. **Siapkan 3 API Keys yang diperlukan:**
@@ -49,6 +50,19 @@ JINA_API_KEY=your_jina_api_key_here
 
 ## Troubleshooting
 
+### ❌ Docker Build Failed Error
+Jika muncul error seperti ini:
+```
+✕ [stage-0 6/10] RUN pip install -r requirements.txt
+process did not complete successfully: exit code: 1
+```
+
+**Solusi:**
+1. **Hapus file lama:** Hapus `railway.json` dan `Procfile`
+2. **Gunakan konfigurasi baru:** `railway.toml` + `nixpacks.toml`
+3. **Restart deployment** di Railway
+4. **Cek logs** untuk detail error
+
 ### Bot tidak bisa start
 - Cek environment variables sudah benar
 - Cek logs untuk error message
@@ -63,6 +77,26 @@ JINA_API_KEY=your_jina_api_key_here
 - Cek Telegram Bot Token sudah benar
 - Cek bot sudah di-start di Telegram
 - Cek Railway service status
+
+## Alternative Deployment Methods
+
+### Method 1: Nixpacks (Recommended)
+- Gunakan `railway.toml` + `nixpacks.toml`
+- Lebih stabil untuk Python projects
+- Automatic dependency resolution
+
+### Method 2: Dockerfile
+- Gunakan `Dockerfile` yang sudah disediakan
+- Set Railway builder ke "Dockerfile"
+- Lebih predictable build process
+
+### Method 3: Manual Build
+- Jika masih error, coba build manual:
+  1. Clone repo ke local
+  2. `pip install -r requirements.txt`
+  3. `python build_index.py`
+  4. Push folder `storage/` ke repo
+  5. Deploy ulang
 
 ## Fitur Bot Setelah Deploy
 
@@ -88,6 +122,19 @@ JINA_API_KEY=your_jina_api_key_here
 - **Updates:** Update dependencies jika diperlukan
 - **Backup:** Backup folder `storage/` jika perlu
 
+## Common Issues & Solutions
+
+### Issue: "No module named 'llama_index'"
+**Solution:** Pastikan `requirements.txt` sudah benar dan Railway menggunakan Python 3.9
+
+### Issue: "Permission denied" saat build index
+**Solution:** Cek Railway service permissions atau gunakan Dockerfile method
+
+### Issue: Bot stuck di "loading" state
+**Solution:** Cek apakah index sudah ter-build dengan benar
+
 ---
 
-**Note:** Bot ini menggunakan Groq LLM dan Jina AI embeddings. Pastikan API keys masih valid dan ada quota yang cukup. 
+**Note:** Bot ini menggunakan Groq LLM dan Jina AI embeddings. Pastikan API keys masih valid dan ada quota yang cukup.
+
+**Jika masih error:** Coba deploy dengan method Dockerfile yang lebih straightforward. 

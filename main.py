@@ -70,6 +70,31 @@ class FixedJinaEmbedding(JinaEmbedding):
         embeddings = self._get_text_embeddings(texts)
         # Convert numpy array back to list of lists for LlamaIndex
         return [emb.flatten().tolist() for emb in embeddings]
+    
+    # Override additional methods that LlamaIndex might call
+    def get_embeddings(self, texts: list[str]) -> list[list[float]]:
+        """Alias for get_text_embeddings"""
+        return self.get_text_embeddings(texts)
+    
+    def embed_query(self, query: str) -> list[float]:
+        """Alternative method name for query embedding"""
+        return self.get_query_embedding(query)
+    
+    def embed_text(self, text: str) -> list[float]:
+        """Alternative method name for text embedding"""
+        return self.get_text_embedding(text)
+    
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        """Alternative method name for multiple text embeddings"""
+        return self.get_text_embeddings(texts)
+    
+    # Override numpy array methods to always return list
+    def __call__(self, texts: str | list[str]) -> list[float] | list[list[float]]:
+        """Make the embedding model callable with proper return format"""
+        if isinstance(texts, str):
+            return self.get_text_embedding(texts)
+        else:
+            return self.get_text_embeddings(texts)
 
 load_dotenv()
 
@@ -84,7 +109,23 @@ try:
 except Exception as e:
     print(f"⚠️  Error initializing Jina Embedding: {e}")
     print("Bot akan menggunakan default embedding")
-    Settings.embed_model = None
+    
+    # Try to use a different embedding model as fallback
+    try:
+        from llama_index.embeddings.openai import OpenAIEmbedding
+        if os.getenv("OPENAI_API_KEY"):
+            Settings.embed_model = OpenAIEmbedding(
+                api_key=os.getenv("OPENAI_API_KEY"),
+                model="text-embedding-ada-002"
+            )
+            print("✅ OpenAI Embedding initialized as fallback")
+        else:
+            print("⚠️  No OpenAI API key, using default embedding")
+            Settings.embed_model = None
+    except Exception as fallback_error:
+        print(f"⚠️  Fallback embedding also failed: {fallback_error}")
+        print("Bot akan menggunakan default embedding tanpa custom model")
+        Settings.embed_model = None
 
 # ===== ENV =====
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -220,6 +261,13 @@ def build_index_if_needed():
     except Exception as e:
         print(f"❌ Error building index at runtime: {e}")
         return False
+
+# Check if we have a working embedding model
+if Settings.embed_model is None:
+    print("⚠️  No custom embedding model available. Using LlamaIndex default.")
+    print("💡 Bot akan tetap berfungsi tapi mungkin dengan performa yang berbeda.")
+else:
+    print(f"✅ Using embedding model: {type(Settings.embed_model).__name__}")
 
 # ===== Aliases & helper =====
 ALIASES = {

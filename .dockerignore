@@ -1,6 +1,7 @@
 .git
 .gitignore
 README.md
+deploy.md
 .env
 *.log
 __pycache__
@@ -19,7 +20,8 @@ nosetests.xml
 coverage.xml
 *.cover
 *.log
-.git
 .mypy_cache
 .pytest_cache
-.hypothesis 
+.hypothesis
+storage/
+feedback_log.csv 

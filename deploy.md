@@ -40,8 +40,8 @@ JINA_API_KEY=your_jina_api_key_here
 - Railway akan otomatis detect Python project
 - Build process akan:
   1. Install dependencies dari `requirements.txt`
-  2. Jalankan `build_index.py` untuk build index
-  3. Start bot dengan `python main.py`
+  2. Start bot dengan `python main.py`
+  3. Bot akan build index otomatis saat runtime
 
 ### 5. Monitor Deployment
 - Cek tab "Deployments" untuk status build
@@ -58,10 +58,22 @@ process did not complete successfully: exit code: 1
 ```
 
 **Solusi:**
-1. **Hapus file lama:** Hapus `railway.json` dan `Procfile`
-2. **Gunakan konfigurasi baru:** `railway.toml` + `nixpacks.toml`
+1. **Gunakan konfigurasi baru:** `railway.toml` + `nixpacks.toml`
+2. **Hapus file lama:** `railway.json` dan `Procfile` (jika ada)
 3. **Restart deployment** di Railway
 4. **Cek logs** untuk detail error
+
+### ❌ Build Index Failed Error
+Jika muncul error seperti ini:
+```
+✕ [7/7] RUN python build_index.py
+process did not complete successfully: exit code: 1
+```
+
+**Solusi:**
+1. **Konfigurasi sudah diperbaiki** - bot akan build index otomatis saat runtime
+2. **Tidak perlu manual build** - biarkan bot handle sendiri
+3. **Cek environment variables** sudah benar
 
 ### Bot tidak bisa start
 - Cek environment variables sudah benar
@@ -69,9 +81,9 @@ process did not complete successfully: exit code: 1
 - Pastikan semua dependencies terinstall
 
 ### Index tidak bisa di-load
-- Cek folder `storage/` sudah terbuat
-- Cek permission Railway untuk write file
-- Cek logs build_index.py
+- Bot akan otomatis build index saat pertama kali digunakan
+- Tunggu beberapa saat saat bot mempersiapkan index
+- Cek logs untuk progress building
 
 ### Bot tidak merespon
 - Cek Telegram Bot Token sudah benar
@@ -84,19 +96,12 @@ process did not complete successfully: exit code: 1
 - Gunakan `railway.toml` + `nixpacks.toml`
 - Lebih stabil untuk Python projects
 - Automatic dependency resolution
+- **Index building otomatis saat runtime**
 
 ### Method 2: Dockerfile
 - Gunakan `Dockerfile` yang sudah disediakan
 - Set Railway builder ke "Dockerfile"
 - Lebih predictable build process
-
-### Method 3: Manual Build
-- Jika masih error, coba build manual:
-  1. Clone repo ke local
-  2. `pip install -r requirements.txt`
-  3. `python build_index.py`
-  4. Push folder `storage/` ke repo
-  5. Deploy ulang
 
 ## Fitur Bot Setelah Deploy
 
@@ -120,7 +125,7 @@ process did not complete successfully: exit code: 1
 - **Logs:** Cek Railway logs secara berkala
 - **Feedback:** Review `feedback_log.csv` untuk improvement
 - **Updates:** Update dependencies jika diperlukan
-- **Backup:** Backup folder `storage/` jika perlu
+- **Index:** Bot akan otomatis rebuild index jika diperlukan
 
 ## Common Issues & Solutions
 
@@ -128,13 +133,16 @@ process did not complete successfully: exit code: 1
 **Solution:** Pastikan `requirements.txt` sudah benar dan Railway menggunakan Python 3.9
 
 ### Issue: "Permission denied" saat build index
-**Solution:** Cek Railway service permissions atau gunakan Dockerfile method
+**Solution:** Bot akan handle ini otomatis saat runtime
 
 ### Issue: Bot stuck di "loading" state
-**Solution:** Cek apakah index sudah ter-build dengan benar
+**Solution:** Bot sedang build index, tunggu beberapa saat
+
+### Issue: Index tidak tersedia
+**Solution:** Bot akan otomatis build index saat pertama kali digunakan
 
 ---
 
 **Note:** Bot ini menggunakan Groq LLM dan Jina AI embeddings. Pastikan API keys masih valid dan ada quota yang cukup.
 
-**Jika masih error:** Coba deploy dengan method Dockerfile yang lebih straightforward. 
+**Keunggulan baru:** Bot sekarang akan otomatis build index saat runtime, jadi tidak perlu manual build lagi! 

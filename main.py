@@ -76,9 +76,11 @@ def load_retrievers():
             continue
     
     if not retrievers:
-        raise RuntimeError("Tidak ada index yang bisa di-load. Pastikan sudah build index atau cek permission Railway.")
+        print("⚠️  Tidak ada index yang tersedia. Bot akan build index saat runtime.")
+        return False
     
     print("✅ Retrievers loaded:", sorted(retrievers.keys()))
+    return True
 
 # Load retrievers with error handling
 try:
@@ -86,6 +88,33 @@ try:
 except Exception as e:
     print(f"❌ Error loading retrievers: {e}")
     print("Bot akan tetap berjalan tapi tidak bisa menjawab pertanyaan sampai index tersedia.")
+
+# Function to build index at runtime if needed
+def build_index_if_needed():
+    if retrievers:
+        return True
+    
+    print("🔨 Building index at runtime...")
+    try:
+        # Import build_index functions
+        from build_index import build_one, CATEGORIES as BUILD_CATEGORIES
+        
+        success_count = 0
+        for cat, path in BUILD_CATEGORIES.items():
+            if build_one(cat, path, PERSIST_ROOT):
+                success_count += 1
+        
+        if success_count > 0:
+            # Reload retrievers
+            load_retrievers()
+            print(f"✅ Index berhasil dibangun untuk {success_count} kategori")
+            return True
+        else:
+            print("❌ Tidak ada index yang berhasil dibangun")
+            return False
+    except Exception as e:
+        print(f"❌ Error building index at runtime: {e}")
+        return False
 
 # ===== Aliases & helper =====
 ALIASES = {
@@ -174,12 +203,17 @@ async def pick_category_callback(update: Update, context: ContextTypes.DEFAULT_T
 
 # ===== Q&A handler =====
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Check if retrievers are available
+    # Check if retrievers are available, if not try to build them
     if not retrievers:
-        await update.message.reply_text(
-            "❌ Bot sedang dalam maintenance. Index belum tersedia. Coba lagi nanti."
-        )
-        return
+        await update.message.reply_text("⏳ Bot sedang mempersiapkan index, tunggu sebentar...")
+        
+        if build_index_if_needed():
+            await update.message.reply_text("✅ Index siap! Silakan tanya pertanyaanmu.")
+        else:
+            await update.message.reply_text(
+                "❌ Bot sedang dalam maintenance. Index tidak bisa dibangun. Coba lagi nanti."
+            )
+            return
     
     q_raw = update.message.text or ""
     loading = await update.message.reply_text("⏳ Lagi nyari jawabannya...")
@@ -193,7 +227,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.edit_message_text(
                 chat_id=update.effective_chat.id,
                 message_id=loading.message_id,
-                text=f"Kategori '{cat}' belum ter-index. Jalankan build_index.py dulu."
+                text=f"Kategori '{cat}' belum ter-index. Jalankan build_index.py untuk folder itu dulu."
             )
             return
 

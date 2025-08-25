@@ -16,8 +16,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Build index
-RUN python build_index.py
+# Create storage directory
+RUN mkdir -p storage
+
+# Try to build index, but don't fail if it doesn't work
+RUN python build_index.py || echo "Index build failed, will build at runtime"
 
 # Expose port (Railway will handle this)
 EXPOSE 8000

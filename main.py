@@ -23,6 +23,9 @@ class FixedJinaEmbedding(JinaEmbedding):
     def _get_query_embedding(self, query: str) -> np.ndarray:
         """Get query embedding with proper dimensions"""
         embedding = super()._get_query_embedding(query)
+        # Convert list to numpy array if needed
+        if isinstance(embedding, list):
+            embedding = np.array(embedding)
         # Ensure 2D array: (1, 1024) instead of (1024,)
         if embedding.ndim == 1:
             embedding = embedding.reshape(1, -1)
@@ -31,6 +34,9 @@ class FixedJinaEmbedding(JinaEmbedding):
     def _get_text_embedding(self, text: str) -> np.ndarray:
         """Get text embedding with proper dimensions"""
         embedding = super()._get_text_embedding(text)
+        # Convert list to numpy array if needed
+        if isinstance(embedding, list):
+            embedding = np.array(embedding)
         # Ensure 2D array: (1, 1024) instead of (1024,)
         if embedding.ndim == 1:
             embedding = embedding.reshape(1, -1)
@@ -39,6 +45,9 @@ class FixedJinaEmbedding(JinaEmbedding):
     def _get_text_embeddings(self, texts: list[str]) -> np.ndarray:
         """Get multiple text embeddings with proper dimensions"""
         embeddings = super()._get_text_embeddings(texts)
+        # Convert list to numpy array if needed
+        if isinstance(embeddings, list):
+            embeddings = np.array(embeddings)
         # Ensure 2D array: (n, 1024) where n is number of texts
         if embeddings.ndim == 1:
             embeddings = embeddings.reshape(1, -1)

@@ -217,6 +217,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"❌ Error saat memproses: {e}"
         )
 
+def debug_storage():
+    print("📂 Cek isi folder storage:")
+    for root, dirs, files in os.walk("storage"):
+        level = root.replace("storage", "").count(os.sep)
+        indent = " " * 2 * (level)
+        print(f"{indent}{os.path.basename(root)}/")
+        for f in files:
+            print(f"{indent}  {f}")
+
+debug_storage()
+
 # ===== Run bot =====
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()

@@ -14,7 +14,7 @@ from telegram.ext import (
 from llama_index.core import Settings, StorageContext, load_index_from_storage
 from llama_index.embeddings.jinaai import JinaEmbedding
 
-load_dotenv()
+load_dotenv(override=False)
 
 # Gunakan JinaEmbedding langsung (tanpa subclass)
 Settings.embed_model = JinaEmbedding(

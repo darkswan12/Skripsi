@@ -14,6 +14,11 @@ from telegram.ext import (
 from llama_index.core import Settings, StorageContext, load_index_from_storage
 from llama_index.embeddings.jinaai import JinaEmbedding
 
+print("=== DEBUG ENV KEYS (first 20) ===")
+print(list(os.environ.keys())[:20])
+print("=== DEBUG JINA_API_KEY ===")
+print(repr(os.environ.get("JINA_API_KEY")))
+
 load_dotenv(override=False)
 
 # Gunakan JinaEmbedding langsung (tanpa subclass)

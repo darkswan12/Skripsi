@@ -10,13 +10,13 @@ from telegram.ext import (
     CommandHandler, filters, ContextTypes
 )
 
-# ===== LlamaIndex: Jina Embedding (harus sama dengan yang dipakai saat build) =====
+# ===== LlamaIndex: Jina Embedding =====
 from llama_index.core import Settings, StorageContext, load_index_from_storage
 from llama_index.embeddings.jinaai import JinaEmbedding
 
 load_dotenv(override=False)
 
-# Gunakan JinaEmbedding langsung (tanpa subclass)
+# Gunakan JinaEmbedding
 Settings.embed_model = JinaEmbedding(
     api_key=os.getenv("JINA_API_KEY"),
     model="jina-embeddings-v3",
@@ -29,13 +29,12 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
 
-# Validate environment variables
+# Validate env
 assert BOT_TOKEN, "❌ TELEGRAM_BOT_TOKEN belum diset"
 assert GROQ_API_KEY, "❌ GROQ_API_KEY belum diset"
 assert JINA_API_KEY, "❌ JINA_API_KEY belum diset"
 
-print("ENV keys detected:", list(os.environ.keys()))
-print("JINA_API_KEY value (first 10 chars):", (os.getenv("JINA_API_KEY") or "None")[:10])
+print("DEBUG JINA_API_KEY (first 10):", (JINA_API_KEY or "None")[:10])
 
 # ===== LLM Groq =====
 PREFERRED_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"]
@@ -54,9 +53,6 @@ def init_llm():
                           temperature=0.2, max_tokens=MAX_TOKENS, timeout=60.0)
 
 Settings.llm = init_llm()
-
-# (Opsional) Reranker dimatikan biar ringan
-reranker = None
 
 # ===== Index loader =====
 PERSIST_ROOT = Path("storage")
@@ -83,10 +79,22 @@ def load_retrievers():
     print("✅ Retrievers loaded:", sorted(retrievers.keys()))
     return True
 
+def build_index_if_needed():
+    if retrievers:
+        return True
+    try:
+        from build_index import main as build_index_main
+        print("🔨 Membuat index runtime...")
+        build_index_main()
+        return load_retrievers()
+    except Exception as e:
+        print(f"❌ Gagal build index runtime: {e}")
+        return False
+
 try:
     load_retrievers()
 except Exception as e:
-    print(f"❌ Error loading retrievers: {e}")
+    print(f"❌ Error load retrievers: {e}")
 
 # ===== Aliases & helper =====
 ALIASES = {
@@ -164,14 +172,24 @@ async def pick_category_callback(update: Update, context: ContextTypes.DEFAULT_T
         return
     if cat not in retrievers:
         await q.edit_message_text(
-            f"Kategori '{cat}' belum ter-index. Jalankan build_index.py untuk folder itu dulu."
+            f"Kategori '{cat}' belum ter-index. Bot akan mencoba membangun index dulu..."
         )
+        if build_index_if_needed():
+            await q.edit_message_text(f"Mode: 🗂 {cat.capitalize()}\nSilakan ketik pertanyaanmu…")
+        else:
+            await q.edit_message_text("❌ Index gagal dibuat.")
         return
     context.user_data["selected_cat"] = cat
     await q.edit_message_text(f"Mode: 🗂 {cat.capitalize()}\nSilakan ketik pertanyaanmu…")
 
 # ===== Q&A handler =====
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not retrievers:
+        await update.message.reply_text("⏳ Index kosong, coba membangun ulang...")
+        if not build_index_if_needed():
+            await update.message.reply_text("❌ Index tidak tersedia.")
+            return
+
     q_raw = update.message.text or ""
     loading = await update.message.reply_text("⏳ Lagi nyari jawabannya...")
 
@@ -221,13 +239,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 def debug_storage():
-    print("📂 Cek isi folder storage:")
+    print("📂 Isi storage:")
     for root, dirs, files in os.walk("storage"):
-        level = root.replace("storage", "").count(os.sep)
-        indent = " " * 2 * (level)
-        print(f"{indent}{os.path.basename(root)}/")
         for f in files:
-            print(f"{indent}  {f}")
+            print(os.path.join(root, f))
 
 debug_storage()
 

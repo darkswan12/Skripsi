@@ -10,13 +10,13 @@ from telegram.ext import (
     CommandHandler, filters, ContextTypes
 )
 
-# ===== LlamaIndex: Jina Embedding =====
+# ===== LlamaIndex setup =====
 from llama_index.core import Settings, StorageContext, load_index_from_storage
 from llama_index.embeddings.jinaai import JinaEmbedding
 
 load_dotenv(override=False)
 
-# Gunakan JinaEmbedding
+# Gunakan Jina Embedding
 Settings.embed_model = JinaEmbedding(
     api_key=os.getenv("JINA_API_KEY"),
     model="jina-embeddings-v3",
@@ -28,13 +28,9 @@ print("✅ Jina Embedding initialized")
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
-
-# Validate env
 assert BOT_TOKEN, "❌ TELEGRAM_BOT_TOKEN belum diset"
 assert GROQ_API_KEY, "❌ GROQ_API_KEY belum diset"
 assert JINA_API_KEY, "❌ JINA_API_KEY belum diset"
-
-print("DEBUG JINA_API_KEY (first 10):", (JINA_API_KEY or "None")[:10])
 
 # ===== LLM Groq =====
 PREFERRED_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"]
@@ -78,18 +74,6 @@ def load_retrievers():
         return False
     print("✅ Retrievers loaded:", sorted(retrievers.keys()))
     return True
-
-def build_index_if_needed():
-    if retrievers:
-        return True
-    try:
-        from build_index import main as build_index_main
-        print("🔨 Membuat index runtime...")
-        build_index_main()
-        return load_retrievers()
-    except Exception as e:
-        print(f"❌ Gagal build index runtime: {e}")
-        return False
 
 try:
     load_retrievers()
@@ -171,25 +155,13 @@ async def pick_category_callback(update: Update, context: ContextTypes.DEFAULT_T
         await q.edit_message_text("Mode: 🔎 semua kategori.\nTulis pertanyaanmu:")
         return
     if cat not in retrievers:
-        await q.edit_message_text(
-            f"Kategori '{cat}' belum ter-index. Bot akan mencoba membangun index dulu..."
-        )
-        if build_index_if_needed():
-            await q.edit_message_text(f"Mode: 🗂 {cat.capitalize()}\nSilakan ketik pertanyaanmu…")
-        else:
-            await q.edit_message_text("❌ Index gagal dibuat.")
+        await q.edit_message_text(f"Kategori '{cat}' belum ter-index.")
         return
     context.user_data["selected_cat"] = cat
     await q.edit_message_text(f"Mode: 🗂 {cat.capitalize()}\nSilakan ketik pertanyaanmu…")
 
 # ===== Q&A handler =====
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not retrievers:
-        await update.message.reply_text("⏳ Index kosong, coba membangun ulang...")
-        if not build_index_if_needed():
-            await update.message.reply_text("❌ Index tidak tersedia.")
-            return
-
     q_raw = update.message.text or ""
     loading = await update.message.reply_text("⏳ Lagi nyari jawabannya...")
 
@@ -221,14 +193,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"--- KONTEN ---\n{context_text}\n\n"
             f"--- PERTANYAAN ---\n{q}\n"
         )
-
         resp = await Settings.llm.acomplete(prompt)
         answer = (getattr(resp, 'text', None) or str(resp)).strip()
+
+        # Tambah sumber & mode
+        source_note = f"(Sumber: {collect_sources(retrieved_nodes)})"
+        mode_note = f"[Mode: {('Semua' if not cat else cat)}]"
+
+        final_text = f"🧠 {answer}\n\n{source_note}\n{mode_note}"
+
+        # Inline keyboard: feedback + next
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("1", callback_data=f"fb|1|{q_raw}"),
+                InlineKeyboardButton("2", callback_data=f"fb|2|{q_raw}"),
+                InlineKeyboardButton("3", callback_data=f"fb|3|{q_raw}"),
+                InlineKeyboardButton("4", callback_data=f"fb|4|{q_raw}"),
+                InlineKeyboardButton("5", callback_data=f"fb|5|{q_raw}")
+            ],
+            [InlineKeyboardButton("Tanya lagi 🔄", callback_data="NEXT|again")],
+            [InlineKeyboardButton("Selesai ✅", callback_data="NEXT|done")]
+        ])
 
         await context.bot.edit_message_text(
             chat_id=update.effective_chat.id,
             message_id=loading.message_id,
-            text=f"🧠 {answer}"
+            text=final_text,
+            reply_markup=keyboard
         )
 
     except Exception as e:
@@ -238,13 +229,42 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"❌ Error saat memproses: {e}"
         )
 
-def debug_storage():
-    print("📂 Isi storage:")
-    for root, dirs, files in os.walk("storage"):
-        for f in files:
-            print(os.path.join(root, f))
+# ===== Feedback callback =====
+async def feedback_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    try:
+        _, score, question = q.data.split("|", 2)
+    except Exception:
+        await q.edit_message_text("⚠️ Format feedback tidak valid.")
+        return
 
-debug_storage()
+    user = q.from_user
+    row = {"user_id": user.id, "username": user.username or "",
+           "score": score, "question": question, "timestamp": datetime.now().isoformat()}
+
+    with open("feedback_log.csv", "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=row.keys())
+        if f.tell() == 0:
+            writer.writeheader()
+        writer.writerow(row)
+
+    await q.edit_message_text(f"✅ Terima kasih! Feedback {score}/5 terekam.")
+
+# ===== Next step callback =====
+async def next_step_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    try:
+        _, action = q.data.split("|", 1)
+    except Exception:
+        await q.edit_message_text("Pilihan tidak dikenal.")
+        return
+
+    if action == "again":
+        await q.edit_message_text("Pilih kategori baru:", reply_markup=category_keyboard())
+    else:
+        await q.edit_message_text("Terima kasih sudah menggunakan bot ini 👋")
 
 # ===== Run bot =====
 def main():
@@ -253,6 +273,8 @@ def main():
     app.add_handler(CommandHandler("reset", reset_cmd))
     app.add_handler(CallbackQueryHandler(pick_category_callback, pattern=r"^CAT\|"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(CallbackQueryHandler(feedback_callback, pattern=r"^fb\|"))
+    app.add_handler(CallbackQueryHandler(next_step_callback, pattern=r"^NEXT\|"))
     print("🤖 Bot aktif. Gunakan /start untuk memilih kategori.")
     app.run_polling()
 

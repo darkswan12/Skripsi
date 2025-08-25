@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 from dotenv import load_dotenv
+from typing import Union, List
 
 # Load environment variables
 load_dotenv()
@@ -61,7 +62,7 @@ try:
                 embedding = embedding.reshape(1, -1)
             return embedding
         
-        def _get_text_embeddings(self, texts: list[str]) -> np.ndarray:
+        def _get_text_embeddings(self, texts: List[str]) -> np.ndarray:
             """Get multiple text embeddings with proper dimensions"""
             embeddings = super()._get_text_embeddings(texts)
             # Convert list to numpy array if needed
@@ -72,19 +73,19 @@ try:
                 embeddings = embeddings.reshape(1, -1)
             return embeddings
         
-        def get_query_embedding(self, query: str) -> list[float]:
+        def get_query_embedding(self, query: str) -> List[float]:
             """Get query embedding as list for LlamaIndex compatibility"""
             embedding = self._get_query_embedding(query)
             # Convert numpy array back to list for LlamaIndex
             return embedding.flatten().tolist()
         
-        def get_text_embedding(self, text: str) -> list[float]:
+        def get_text_embedding(self, text: str) -> List[float]:
             """Get text embedding as list for LlamaIndex compatibility"""
             embedding = self._get_text_embedding(text)
             # Convert numpy array back to list for LlamaIndex
             return embedding.flatten().tolist()
         
-        def get_text_embeddings(self, texts: list[str]) -> list[list[float]]:
+        def get_text_embeddings(self, texts: List[str]) -> List[List[float]]:
             """Get multiple text embeddings as list for LlamaIndex compatibility"""
             embeddings = self._get_text_embeddings(texts)
             # Convert numpy array back to list of lists for LlamaIndex

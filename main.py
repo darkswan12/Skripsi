@@ -3,6 +3,7 @@ import csv
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
+from typing import Union, List
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -42,7 +43,7 @@ class FixedJinaEmbedding(JinaEmbedding):
             embedding = embedding.reshape(1, -1)
         return embedding
     
-    def _get_text_embeddings(self, texts: list[str]) -> np.ndarray:
+    def _get_text_embeddings(self, texts: List[str]) -> np.ndarray:
         """Get multiple text embeddings with proper dimensions"""
         embeddings = super()._get_text_embeddings(texts)
         # Convert list to numpy array if needed
@@ -53,43 +54,43 @@ class FixedJinaEmbedding(JinaEmbedding):
             embeddings = embeddings.reshape(1, -1)
         return embeddings
     
-    def get_query_embedding(self, query: str) -> list[float]:
+    def get_query_embedding(self, query: str) -> List[float]:
         """Get query embedding as list for LlamaIndex compatibility"""
         embedding = self._get_query_embedding(query)
         # Convert numpy array back to list for LlamaIndex
         return embedding.flatten().tolist()
     
-    def get_text_embedding(self, text: str) -> list[float]:
+    def get_text_embedding(self, text: str) -> List[float]:
         """Get text embedding as list for LlamaIndex compatibility"""
         embedding = self._get_text_embedding(text)
         # Convert numpy array back to list for LlamaIndex
         return embedding.flatten().tolist()
     
-    def get_text_embeddings(self, texts: list[str]) -> list[list[float]]:
+    def get_text_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get multiple text embeddings as list for LlamaIndex compatibility"""
         embeddings = self._get_text_embeddings(texts)
         # Convert numpy array back to list of lists for LlamaIndex
         return [emb.flatten().tolist() for emb in embeddings]
     
     # Override additional methods that LlamaIndex might call
-    def get_embeddings(self, texts: list[str]) -> list[list[float]]:
+    def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Alias for get_text_embeddings"""
         return self.get_text_embeddings(texts)
     
-    def embed_query(self, query: str) -> list[float]:
+    def embed_query(self, query: str) -> List[float]:
         """Alternative method name for query embedding"""
         return self.get_query_embedding(query)
     
-    def embed_text(self, text: str) -> list[float]:
+    def embed_text(self, text: str) -> List[float]:
         """Alternative method name for text embedding"""
         return self.get_text_embedding(text)
     
-    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+    def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """Alternative method name for multiple text embeddings"""
         return self.get_text_embeddings(texts)
     
     # Override numpy array methods to always return list
-    def __call__(self, texts: str | list[str]) -> list[float] | list[list[float]]:
+    def __call__(self, texts: Union[str, List[str]]) -> Union[List[float], List[List[float]]]:
         """Make the embedding model callable with proper return format"""
         if isinstance(texts, str):
             return self.get_text_embedding(texts)

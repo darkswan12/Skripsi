@@ -268,3 +268,134 @@ print(f"Is list: {isinstance(embedding, list)}")
 ---
 
 **Note:** Fix ini sudah diterapkan di `main.py` dan `build_index.py`. Deploy ulang ke Railway untuk apply fix! 🚀 
+
+## ❌ Error: "TypeError: unsupported operand type(s) for |: 'type' and 'types.GenericAlias'"
+
+### 🔍 **Penyebab Error:**
+Python 3.9 tidak support **union types** dengan `|` operator:
+- **Python 3.10+:** `str | list[str]` ✅
+- **Python 3.9:** `Union[str, List[str]]` ✅
+- **Python 3.9:** `str | list[str]` ❌ (tidak support)
+
+### ✅ **Solusi yang Sudah Diterapkan:**
+
+#### 1. **Python 3.9 Compatible Type Hints**
+```python
+# Sebelum (Python 3.10+ syntax)
+def __call__(self, texts: str | list[str]) -> list[float] | list[list[float]]:
+
+# Sesudah (Python 3.9 compatible)
+from typing import Union, List
+def __call__(self, texts: Union[str, List[str]]) -> Union[List[float], List[List[float]]]:
+```
+
+#### 2. **Consistent Type Hints**
+```python
+# Semua type hints menggunakan typing module
+from typing import Union, List
+
+def get_text_embeddings(self, texts: List[str]) -> List[List[float]]:
+    # ...
+
+def get_query_embedding(self, query: str) -> List[float]:
+    # ...
+```
+
+#### 3. **Railway Python 3.9 Compatibility**
+- `runtime.txt`: `python-3.9.18`
+- `nixpacks.toml`: `python39`
+- Semua type hints compatible dengan Python 3.9
+
+### 🚀 **Cara Deploy Setelah Fix:**
+
+#### **Step 1: Push Perubahan**
+```bash
+git add .
+git commit -m "Fix Python 3.9 compatibility with typing.Union and typing.List"
+git push origin main
+```
+
+#### **Step 2: Deploy di Railway**
+- Railway akan otomatis rebuild dengan fix baru
+- Expected output:
+```
+🚀 Bot mode: Deployment
+ Platform: Railway
+🔑 Environment variables loaded: True
+✅ Jina Embedding initialized with dimension fix
+✅ Using embedding model: FixedJinaEmbedding
+✅ Retrievers loaded: ['character', 'factions', 'items', 'maps', 'npc', 'timeline']
+ Bot aktif. Gunakan /start untuk memilih kategori.
+```
+
+## 🧪 **Test Setelah Fix:**
+
+### **Test 1: Basic Question**
+1. Kirim `/start` ke bot
+2. Pilih kategori "Character"
+3. Tanya: "Siapa Iron Man?"
+4. **Expected:** Bot jawab tanpa error Python compatibility
+
+### **Test 2: Category Prefix**
+1. Langsung tanya: "character: Siapa Spider-Man?"
+2. **Expected:** Bot jawab tanpa error Python compatibility
+
+### **Test 3: All Categories**
+1. Pilih "🔎 Semua Kategori"
+2. Tanya: "Apa itu Avengers?"
+3. **Expected:** Bot jawab dari berbagai sumber tanpa error
+
+## 🔧 **Jika Masih Error:**
+
+### **Option 1: Check Python Version**
+```bash
+# Di Railway, cek Python version
+python --version
+# Expected: Python 3.9.x
+```
+
+### **Option 2: Check Logs**
+```bash
+# Di Railway, cek tab "Logs"
+# Cari error message yang lebih spesifik
+```
+
+### **Option 3: Fallback Embedding**
+Jika masih ada masalah, bot akan gunakan default embedding:
+```python
+Settings.embed_model = None  # Default embedding
+```
+
+## 📊 **Expected Behavior Setelah Fix:**
+
+✅ **Bot start tanpa error Python compatibility**  
+✅ **Bot start tanpa error type hints**  
+✅ **Bot start tanpa error dimension**  
+✅ **Bot start tanpa error list.ndim**  
+✅ **Bot start tanpa error validation**  
+✅ **Embedding vectors dengan shape yang benar**  
+✅ **Embeddings dalam format list yang compatible**  
+✅ **Retrieval berfungsi normal**  
+✅ **Bot bisa jawab pertanyaan Marvel**  
+✅ **Feedback system berfungsi**  
+
+## 🎯 **Success Criteria:**
+
+- ❌ **Sebelum:** `shapes (1024,) and (1,) not aligned`
+- ❌ **Sebelum:** `list object has no attribute ndim`
+- ❌ **Sebelum:** `1 validation error for EmbeddingEndEvent`
+- ❌ **Sebelum:** `TypeError: unsupported operand type(s) for |`
+- ✅ **Sesudah:** `✅ Jina Embedding initialized with dimension fix`
+
+## 🔍 **Root Cause Analysis:**
+
+1. **Jina Embeddings v3** return `list` bukan `numpy array`
+2. **LlamaIndex** expect `numpy array` dengan shape tertentu
+3. **Type mismatch** menyebabkan error `list.ndim`
+4. **Dimension mismatch** menyebabkan error shape alignment
+5. **Format mismatch** menyebabkan error validation di event system
+6. **Python 3.9** tidak support union types dengan `|` operator
+
+---
+
+**Note:** Fix ini sudah diterapkan di `main.py` dan `build_index.py`. Deploy ulang ke Railway untuk apply fix! 🚀 

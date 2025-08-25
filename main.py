@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
+from flask import Flask, send_file, jsonify
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, MessageHandler, CallbackQueryHandler,
@@ -12,9 +13,7 @@ from telegram.ext import (
 )
 
 # ==== Flask dashboard ====
-from flask import Flask, send_file, jsonify
 dashboard_app = Flask(__name__)
-
 FEEDBACK_FILE = "feedback_log.csv"
 
 @dashboard_app.route("/")
@@ -23,6 +22,7 @@ def home():
     <h1>Bot Dashboard</h1>
     <ul>
         <li><a href='/status'>Status Bot</a></li>
+        <li><a href='/categories'>Daftar Kategori Index</a></li>
         <li><a href='/feedback'>Lihat Feedback (JSON)</a></li>
         <li><a href='/download-feedback'>Download feedback_log.csv</a></li>
     </ul>
@@ -35,6 +35,13 @@ def status():
         "telegram_bot": os.getenv("TELEGRAM_BOT_TOKEN") is not None,
         "groq_api": os.getenv("GROQ_API_KEY") is not None,
         "jina_api": os.getenv("JINA_API_KEY") is not None
+    })
+
+@dashboard_app.route("/categories")
+def categories_status():
+    return jsonify({
+        "loaded_categories": sorted(list(retrievers.keys())),
+        "expected_categories": CATEGORIES
     })
 
 @dashboard_app.route("/feedback")
@@ -56,12 +63,12 @@ def download_feedback():
         return "⚠️ File feedback_log.csv belum ada", 404
     return send_file(FEEDBACK_FILE, as_attachment=True)
 
-# ==== Bot setup ====
+
+# ==== Telegram Bot ====
 from llama_index.core import Settings, StorageContext, load_index_from_storage
 from llama_index.embeddings.jinaai import JinaEmbedding
 
 load_dotenv(override=False)
-
 Settings.embed_model = JinaEmbedding(
     api_key=os.getenv("JINA_API_KEY"),
     model="jina-embeddings-v3",
@@ -114,7 +121,7 @@ try:
 except Exception as e:
     print(f"❌ Error load retrievers: {e}")
 
-# ===== Aliases =====
+# ===== Aliases & helper =====
 ALIASES = {
     "character": ["character", "karakter"],
     "factions": ["faction", "factions", "tim", "team", "faksi"],
@@ -216,7 +223,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mode_note = f"[Mode: {('Semua' if not cat else cat)}]"
         final_text = f"🧠 {answer}\n\n{source_note}\n{mode_note}"
 
-        # Edit pesan loading jadi jawaban
         await context.bot.edit_message_text(chat_id=update.effective_chat.id,
                                             message_id=loading.message_id,
                                             text=final_text)
@@ -280,11 +286,7 @@ async def next_step_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await q.edit_message_text("Terima kasih sudah menggunakan bot ini 👋")
 
 # ===== Run both bot + dashboard =====
-def run_dashboard():
-    port = int(os.environ.get("PORT", 8000))
-    dashboard_app.run(host="0.0.0.0", port=port)
-
-def main():
+def run_bot():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CallbackQueryHandler(pick_category_callback, pattern=r"^CAT\|"))
@@ -295,5 +297,7 @@ def main():
     app.run_polling()
 
 if __name__ == "__main__":
-    threading.Thread(target=run_dashboard, daemon=True).start()
-    main()
+    threading.Thread(target=run_bot, daemon=True).start()
+    port = int(os.environ.get("PORT", 8000))
+    print(f"🌐 Dashboard running on port {port}")
+    dashboard_app.run(host="0.0.0.0", port=port)

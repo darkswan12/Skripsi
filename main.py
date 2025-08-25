@@ -24,9 +24,49 @@ Settings.embed_model = JinaEmbedding(
 # ===== ENV =====
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-assert BOT_TOKEN, "TELEGRAM_BOT_TOKEN belum diset di Railway environment variables"
-assert GROQ_API_KEY, "GROQ_API_KEY belum diset di Railway environment variables"
-assert os.getenv("JINA_API_KEY"), "JINA_API_KEY belum diset di Railway environment variables"
+JINA_API_KEY = os.getenv("JINA_API_KEY")
+
+# Check deployment mode
+IS_DEPLOYMENT = (
+    os.getenv("RAILWAY_ENVIRONMENT") or 
+    os.getenv("RAILWAY_SERVICE_NAME") or
+    os.getenv("RAILWAY_PROJECT_ID") or
+    os.getenv("PORT") or
+    os.getenv("DYNO") or
+    os.getenv("VERCEL") or
+    os.getenv("FLY_APP_NAME") or
+    os.getenv("RENDER")
+)
+
+print(f"🚀 Bot mode: {'Deployment' if IS_DEPLOYMENT else 'Local'}")
+if IS_DEPLOYMENT:
+    print(f"🌐 Platform: {os.getenv('RAILWAY_ENVIRONMENT', 'Railway')}")
+    print(f"🔑 Environment variables loaded: {bool(BOT_TOKEN and GROQ_API_KEY and JINA_API_KEY)}")
+
+# Validate environment variables
+if not BOT_TOKEN:
+    error_msg = "TELEGRAM_BOT_TOKEN belum diset di environment variables"
+    if IS_DEPLOYMENT:
+        error_msg += " (Railway)"
+    else:
+        error_msg += " (.env file)"
+    assert BOT_TOKEN, error_msg
+
+if not GROQ_API_KEY:
+    error_msg = "GROQ_API_KEY belum diset di environment variables"
+    if IS_DEPLOYMENT:
+        error_msg += " (Railway)"
+    else:
+        error_msg += " (.env file)"
+    assert GROQ_API_KEY, error_msg
+
+if not JINA_API_KEY:
+    error_msg = "JINA_API_KEY belum diset di environment variables"
+    if IS_DEPLOYMENT:
+        error_msg += " (Railway)"
+    else:
+        error_msg += " (.env file)"
+    assert JINA_API_KEY, error_msg
 
 # ===== LLM Groq =====
 PREFERRED_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"]
@@ -358,4 +398,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

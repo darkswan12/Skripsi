@@ -7,9 +7,26 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Check if we're in deployment mode
-IS_DEPLOYMENT = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("HEROKU_APP_NAME") or os.getenv("PORT")
+IS_DEPLOYMENT = (
+    os.getenv("RAILWAY_ENVIRONMENT") or 
+    os.getenv("RAILWAY_SERVICE_NAME") or
+    os.getenv("RAILWAY_PROJECT_ID") or
+    os.getenv("PORT") or
+    os.getenv("DYNO") or  # Heroku
+    os.getenv("VERCEL") or  # Vercel
+    os.getenv("FLY_APP_NAME") or  # Fly.io
+    os.getenv("RENDER") or  # Render
+    os.getenv("DETA_SPACE_APP") or  # Deta Space
+    os.getenv("FLY_APP_NAME") or  # Fly.io
+    os.getenv("KUBERNETES_SERVICE_HOST") or  # Kubernetes
+    os.getenv("AWS_EXECUTION_ENV") or  # AWS Lambda
+    os.getenv("GOOGLE_CLOUD_PROJECT") or  # Google Cloud
+    os.getenv("AZURE_FUNCTIONS_ENVIRONMENT")  # Azure Functions
+)
 
 print(f"🚀 Build mode: {'Deployment' if IS_DEPLOYMENT else 'Local'}")
+if IS_DEPLOYMENT:
+    print(f"🌐 Deployment platform detected: {os.getenv('RAILWAY_ENVIRONMENT', 'Railway')}")
 
 # ===== Embedding via Jina AI (multilingual, gratis) =====
 try:

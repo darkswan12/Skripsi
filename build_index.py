@@ -36,61 +36,12 @@ try:
     import numpy as np
     
     # Custom Jina Embedding class to fix dimension issues
-    class FixedJinaEmbedding(JinaEmbedding):
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-        
-        def _get_query_embedding(self, query: str) -> np.ndarray:
-            """Get query embedding with proper dimensions"""
-            embedding = super()._get_query_embedding(query)
-            # Convert list to numpy array if needed
-            if isinstance(embedding, list):
-                embedding = np.array(embedding)
-            # Ensure 2D array: (1, 1024) instead of (1024,)
-            if embedding.ndim == 1:
-                embedding = embedding.reshape(1, -1)
-            return embedding
-        
-        def _get_text_embedding(self, text: str) -> np.ndarray:
-            """Get text embedding with proper dimensions"""
-            embedding = super()._get_text_embedding(text)
-            # Convert list to numpy array if needed
-            if isinstance(embedding, list):
-                embedding = np.array(embedding)
-            # Ensure 2D array: (1, 1024) instead of (1024,)
-            if embedding.ndim == 1:
-                embedding = embedding.reshape(1, -1)
-            return embedding
-        
-        def _get_text_embeddings(self, texts: List[str]) -> np.ndarray:
-            """Get multiple text embeddings with proper dimensions"""
-            embeddings = super()._get_text_embeddings(texts)
-            # Convert list to numpy array if needed
-            if isinstance(embeddings, list):
-                embeddings = np.array(embeddings)
-            # Ensure 2D array: (n, 1024) where n is number of texts
-            if embeddings.ndim == 1:
-                embeddings = embeddings.reshape(1, -1)
-            return embeddings
-        
-        def get_query_embedding(self, query: str) -> List[float]:
-            """Get query embedding as list for LlamaIndex compatibility"""
-            embedding = self._get_query_embedding(query)
-            # Convert numpy array back to list for LlamaIndex
-            return embedding.flatten().tolist()
-        
-        def get_text_embedding(self, text: str) -> List[float]:
-            """Get text embedding as list for LlamaIndex compatibility"""
-            embedding = self._get_text_embedding(text)
-            # Convert numpy array back to list for LlamaIndex
-            return embedding.flatten().tolist()
-        
-        def get_text_embeddings(self, texts: List[str]) -> List[List[float]]:
-            """Get multiple text embeddings as list for LlamaIndex compatibility"""
-            embeddings = self._get_text_embeddings(texts)
-            # Convert numpy array back to list of lists for LlamaIndex
-            return [emb.flatten().tolist() for emb in embeddings]
-    
+    Settings.embed_model = JinaEmbedding(
+    api_key=jina_key,
+    model="jina-embeddings-v3",
+    task="text-matching",
+)
+
     # Check if JINA_API_KEY is available
     jina_key = os.getenv("JINA_API_KEY")
     if not jina_key:

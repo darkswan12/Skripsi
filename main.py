@@ -10,13 +10,13 @@ from telegram.ext import (
     CommandHandler, filters, ContextTypes
 )
 
-# ===== LlamaIndex setup =====
+# ===== LlamaIndex: Jina Embedding =====
 from llama_index.core import Settings, StorageContext, load_index_from_storage
 from llama_index.embeddings.jinaai import JinaEmbedding
 
 load_dotenv(override=False)
 
-# Gunakan Jina Embedding
+# Gunakan JinaEmbedding
 Settings.embed_model = JinaEmbedding(
     api_key=os.getenv("JINA_API_KEY"),
     model="jina-embeddings-v3",
@@ -199,28 +199,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Tambah sumber & mode
         source_note = f"(Sumber: {collect_sources(retrieved_nodes)})"
         mode_note = f"[Mode: {('Semua' if not cat else cat)}]"
-
         final_text = f"🧠 {answer}\n\n{source_note}\n{mode_note}"
 
-        # Inline keyboard: feedback + next
-        keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("1", callback_data=f"fb|1|{q_raw}"),
-                InlineKeyboardButton("2", callback_data=f"fb|2|{q_raw}"),
-                InlineKeyboardButton("3", callback_data=f"fb|3|{q_raw}"),
-                InlineKeyboardButton("4", callback_data=f"fb|4|{q_raw}"),
-                InlineKeyboardButton("5", callback_data=f"fb|5|{q_raw}")
-            ],
-            [InlineKeyboardButton("Tanya lagi 🔄", callback_data="NEXT|again")],
-            [InlineKeyboardButton("Selesai ✅", callback_data="NEXT|done")]
-        ])
-
+        # Edit pesan loading jadi jawaban final
         await context.bot.edit_message_text(
             chat_id=update.effective_chat.id,
             message_id=loading.message_id,
-            text=final_text,
-            reply_markup=keyboard
+            text=final_text
         )
+
+        # Pesan baru: Feedback 1–5
+        keyboard_fb = InlineKeyboardMarkup([[ 
+            InlineKeyboardButton("1", callback_data=f"fb|1|{q_raw}"),
+            InlineKeyboardButton("2", callback_data=f"fb|2|{q_raw}"),
+            InlineKeyboardButton("3", callback_data=f"fb|3|{q_raw}"),
+            InlineKeyboardButton("4", callback_data=f"fb|4|{q_raw}"),
+            InlineKeyboardButton("5", callback_data=f"fb|5|{q_raw}")
+        ]])
+        await update.message.reply_text("Nilai jawaban ini (1=buruk, 5=bagus):", reply_markup=keyboard_fb)
+
+        # Pesan baru: Next step
+        keyboard_next = InlineKeyboardMarkup([
+            [InlineKeyboardButton("Tanya lagi 🔄", callback_data="NEXT|again")],
+            [InlineKeyboardButton("Selesai ✅", callback_data="NEXT|done")]
+        ])
+        await update.message.reply_text("Apakah masih ingin bertanya?", reply_markup=keyboard_next)
 
     except Exception as e:
         await context.bot.edit_message_text(

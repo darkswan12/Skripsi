@@ -32,6 +32,36 @@ if IS_DEPLOYMENT:
 try:
     from llama_index.core import Settings
     from llama_index.embeddings.jinaai import JinaEmbedding
+    import numpy as np
+    
+    # Custom Jina Embedding class to fix dimension issues
+    class FixedJinaEmbedding(JinaEmbedding):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+        
+        def _get_query_embedding(self, query: str) -> np.ndarray:
+            """Get query embedding with proper dimensions"""
+            embedding = super()._get_query_embedding(query)
+            # Ensure 2D array: (1, 1024) instead of (1024,)
+            if embedding.ndim == 1:
+                embedding = embedding.reshape(1, -1)
+            return embedding
+        
+        def _get_text_embedding(self, text: str) -> np.ndarray:
+            """Get text embedding with proper dimensions"""
+            embedding = super()._get_text_embedding(text)
+            # Ensure 2D array: (1, 1024) instead of (1024,)
+            if embedding.ndim == 1:
+                embedding = embedding.reshape(1, -1)
+            return embedding
+        
+        def _get_text_embeddings(self, texts: list[str]) -> np.ndarray:
+            """Get multiple text embeddings with proper dimensions"""
+            embeddings = super()._get_text_embeddings(texts)
+            # Ensure 2D array: (n, 1024) where n is number of texts
+            if embeddings.ndim == 1:
+                embeddings = embeddings.reshape(1, -1)
+            return embeddings
     
     # Check if JINA_API_KEY is available
     jina_key = os.getenv("JINA_API_KEY")
@@ -39,12 +69,13 @@ try:
         print("⚠️  JINA_API_KEY tidak tersedia, skip embedding setup")
         Settings.embed_model = None
     else:
-        print("✅ JINA_API_KEY tersedia, setup embedding...")
-        Settings.embed_model = JinaEmbedding(
+        print("✅ JINA_API_KEY tersedia, setup embedding dengan dimension fix...")
+        Settings.embed_model = FixedJinaEmbedding(
             api_key=jina_key,
             model="jina-embeddings-v3",
             task="text-matching",
         )
+        print("✅ Jina Embedding initialized with dimension fix")
 except ImportError as e:
     print(f"⚠️  Error importing llama_index: {e}")
     print("Index building akan di-skip")

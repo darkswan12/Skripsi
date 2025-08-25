@@ -34,6 +34,9 @@ assert BOT_TOKEN, "❌ TELEGRAM_BOT_TOKEN belum diset"
 assert GROQ_API_KEY, "❌ GROQ_API_KEY belum diset"
 assert JINA_API_KEY, "❌ JINA_API_KEY belum diset"
 
+print("ENV keys detected:", list(os.environ.keys()))
+print("JINA_API_KEY value (first 10 chars):", (os.getenv("JINA_API_KEY") or "None")[:10])
+
 # ===== LLM Groq =====
 PREFERRED_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"]
 MAX_TOKENS = 1024

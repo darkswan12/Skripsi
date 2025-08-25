@@ -43,18 +43,20 @@ try:
 )
 
     # Check if JINA_API_KEY is available
+    # ambil API key dari environment
     jina_key = os.getenv("JINA_API_KEY")
+
     if not jina_key:
         print("⚠️  JINA_API_KEY tidak tersedia, skip embedding setup")
         Settings.embed_model = None
     else:
-        print("✅ JINA_API_KEY tersedia, setup embedding dengan dimension fix...")
-        Settings.embed_model = FixedJinaEmbedding(
+        print("✅ JINA_API_KEY tersedia, setup embedding...")
+        Settings.embed_model = JinaEmbedding(
             api_key=jina_key,
             model="jina-embeddings-v3",
             task="text-matching",
         )
-        print("✅ Jina Embedding initialized with dimension fix")
+        print("✅ Jina Embedding initialized")
 except ImportError as e:
     print(f"⚠️  Error importing llama_index: {e}")
     print("Index building akan di-skip")

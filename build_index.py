@@ -37,22 +37,22 @@ try:
     
     # Custom Jina Embedding class to fix dimension issues
     Settings.embed_model = JinaEmbedding(
-    api_key=jina_key,
+    api_key=JINA_API_KEY,
     model="jina-embeddings-v3",
     task="text-matching",
 )
 
     # Check if JINA_API_KEY is available
     # ambil API key dari environment
-    jina_key = os.getenv("JINA_API_KEY")
+    JINA_API_KEY = os.getenv("JINA_API_KEY")
 
-    if not jina_key:
+    if not JINA_API_KEY:
         print("⚠️  JINA_API_KEY tidak tersedia, skip embedding setup")
         Settings.embed_model = None
     else:
         print("✅ JINA_API_KEY tersedia, setup embedding...")
         Settings.embed_model = JinaEmbedding(
-            api_key=jina_key,
+            api_key=JINA_API_KEY,
             model="jina-embeddings-v3",
             task="text-matching",
         )

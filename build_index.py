@@ -71,6 +71,24 @@ try:
             if embeddings.ndim == 1:
                 embeddings = embeddings.reshape(1, -1)
             return embeddings
+        
+        def get_query_embedding(self, query: str) -> list[float]:
+            """Get query embedding as list for LlamaIndex compatibility"""
+            embedding = self._get_query_embedding(query)
+            # Convert numpy array back to list for LlamaIndex
+            return embedding.flatten().tolist()
+        
+        def get_text_embedding(self, text: str) -> list[float]:
+            """Get text embedding as list for LlamaIndex compatibility"""
+            embedding = self._get_text_embedding(text)
+            # Convert numpy array back to list for LlamaIndex
+            return embedding.flatten().tolist()
+        
+        def get_text_embeddings(self, texts: list[str]) -> list[list[float]]:
+            """Get multiple text embeddings as list for LlamaIndex compatibility"""
+            embeddings = self._get_text_embeddings(texts)
+            # Convert numpy array back to list of lists for LlamaIndex
+            return [emb.flatten().tolist() for emb in embeddings]
     
     # Check if JINA_API_KEY is available
     jina_key = os.getenv("JINA_API_KEY")
